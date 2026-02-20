@@ -1,0 +1,16 @@
+/* Minimal styles for editable blank page */
+html, body {
+  height: 100%;
+  margin: 0;
+  background: #fff;
+  color: #111;
+  font-family: system-ui, "Segoe UI", Arial, sans-serif;
+}
+.editor {
+  height: 100vh;
+  outline: none;
+  padding: 24px;
+  box-sizing: border-box;
+  font-size: 16px;
+  line-height: 1.5;
+}
