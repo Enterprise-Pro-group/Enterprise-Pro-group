@@ -1,4 +1,4 @@
-
+#https://www.geeksforgeeks.org/python/login-and-registration-project-using-flask-and-mysql/
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_mysqldb import MySQL
 import MySQLdb.cursors
