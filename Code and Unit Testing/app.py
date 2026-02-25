@@ -6,6 +6,7 @@ import re
 
 # configure app 
 app = Flask(__name__)
+app.secret_key = "stayhere"
 
 # connect to database 
 def opendb():
@@ -33,8 +34,8 @@ def after_request(response):
 def login_required(f):
     @wraps(f) # pass functions to this function first to require login 
     def wrapper(*args, **kwargs): # decorated functions can have any parameters 
-        #if session['loggedin'] == False:
-            #return redirect("/login")
+        if 'loggedin' not in session:
+            return redirect("/login")
         return f(*args, **kwargs) # if logged in call original function 
     return wrapper
 
@@ -60,7 +61,7 @@ def signup():
             msg = 'Please fill out the form!'
         else:
             passwordhash = generate_password_hash(password)
-            cursor.execute('INSERT INTO users VALUES (%s, %s)', (email, passwordhash))
+            cursor.execute('INSERT INTO users (email, password_hash) VALUES (%s, %s)', (email, passwordhash))
             db.commit()
             msg = 'You have successfully registered!'
             db.close()
@@ -81,11 +82,12 @@ def login():
         cursor.execute('SELECT * FROM users WHERE email = %s', (email))
         account = cursor.fetchone()
         db.close() 
-        if account and check_password_hash(account['password'], password):
+
+        if account and check_password_hash(account['password_hash'], password):
             session['loggedin'] = True
             session['user_id'] = account['user_id']
             session['email'] = account['email']
-            return render_template('index.html', msg='Logged in successfully!')
+            return render_template('chat.html', msg='Logged in successfully!')
         else:
             msg = 'Incorrect username/password!'
     return render_template('login.html', msg=msg)
@@ -99,11 +101,14 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('login'))
 
+@app.route("/settings")
+def settings():
+    return render_template("settings.html")
 
 # change password TODO
 @app.route("/changepassword", methods=["GET", "POST"])
 @login_required
-def changePassword():
+def change_password():
     if request.method == "POST":
         # TODO 
         return redirect("settings.html")
@@ -113,7 +118,7 @@ def changePassword():
 # change email TODO
 @app.route("/changeemail", methods=["GET", "POST"])
 @login_required
-def changeEmail():
+def change_email():
     if request.method == "POST":
         # TODO 
         return redirect("settings.html")
@@ -121,9 +126,9 @@ def changeEmail():
     return render_template("settings.html")
 
 # delete account TODO
-@app.route("/delete", methods=["GET", "POST"])
+@app.route("/deleteaccount", methods=["GET", "POST"])
 @login_required
-def delete():
+def delete_account():
     if request.method == "POST":
         # TODO
         return render_template("settings.html")
@@ -131,14 +136,15 @@ def delete():
     return render_template("settings.html")
 
 # delete data TODO
-@app.route("/deletedata", methods=["GET", "POST"])
+@app.route("/deletehistory", methods=["GET", "POST"])
 @login_required
-def deleteData():
+def delete_history():
     if request.method == "POST":
         # TODO
         return render_template("settings.html")
     
     return render_template("settings.html")
+
 
 # main page - send a message to quick TODO
 @app.route("/", methods=["GET", "POST"])
@@ -177,7 +183,7 @@ def calculate(): # takes a dictionary
 # load chat history TODO
 @app.route("/chathistory", methods=["GET"])
 @login_required
-def loadHistory():
+def chat_history():
     # TODO 
     # method will always be get 
     # when user goes to this page, show all the prev messages from the db 
