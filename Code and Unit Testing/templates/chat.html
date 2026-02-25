@@ -1,1 +1,30 @@
-<h1> HELLO </h1>
+{% extends "layout.html" %}
+
+{% block title %}
+Ask Quick
+{% endblock %}
+
+{% block main %}
+<div class="card">
+    <h3>hello how can i help you today?</h3>
+
+    <form class="form" action="/chat" method="POST">
+        <input class="input" type="text" name="message" placeholder="type your query here..." required>
+        <button class="button" type="submit">ASK QUICK</button>
+    </form>
+
+    <!-- dynamically insert the reply -->
+    
+    {% if reply %}
+    <br>
+    <div class="button">
+        {{ reply }}
+    </div>
+    {% endif %} 
+    
+    <!-- dynamically insert the next input box if needed -->
+
+    <!-- dynamically insert the reply and keep doing that until done -->
+</div>
+
+{% endblock %}

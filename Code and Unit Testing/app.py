@@ -1,25 +1,20 @@
-from flask import Flask, jsonify, redirect, render_template, request, session
-from flask_session import Session
+from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 import pymysql
 from functools import wraps
+import re
 
 # configure app 
 app = Flask(__name__)
 
-# database config
-dbhost = ''
-dbname = ''
-dbuser = ''
-dbpassword = ''
-
 # connect to database 
 def opendb():
     db = pymysql.connect(
-        host=dbhost,
-        database=dbname,
-        user=dbuser,
-        password=dbpassword,
+        host = "localhost",
+        database = "shopquick",
+        user = "root",
+        password = "",
+        port= 3306,
         cursorclass=pymysql.cursors.DictCursor
     )
     return db
@@ -33,47 +28,77 @@ def after_request(response):
     response.headers["Pragma"] = "no-cache"
     return response
 
+
 # decorarte routes to require login  
 def login_required(f):
-    """
     @wraps(f) # pass functions to this function first to require login 
-    def logged_in(*args, **kwargs): # decorated functions can have any parameters 
-        if session.get("user_id") is None:
-            return redirect("/login")
+    def wrapper(*args, **kwargs): # decorated functions can have any parameters 
+        #if session['loggedin'] == False:
+            #return redirect("/login")
         return f(*args, **kwargs) # if logged in call original function 
-    return logged_in
-
-    """
+    return wrapper
 
 
-
-# sign up TODO
+# sign up
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
-    if request.method == "POST":
-        # TODO - get email and password, hash password, store in db 
-        return redirect("chat.html")
-    
-    return render_template("register.html")
+    msg = ''
+    if request.method == 'POST' and 'email' in request.form and 'password' in request.form :
+        email = request.form.get('email')
+        password = request.form.get('password')
+        db = opendb()
+        cursor = db.cursor()
+        cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
+        account = cursor.fetchone()
+        
+        if account:
+            msg = 'Account already exists!'
+        elif not re.match(r'[^@]+@[^@]+\.[^@]+', email):
+            msg = 'Invalid email address!'
 
-# login TODO
+        elif  not password or not email:
+            msg = 'Please fill out the form!'
+        else:
+            passwordhash = generate_password_hash(password)
+            cursor.execute('INSERT INTO users VALUES (%s, %s)', (email, passwordhash))
+            db.commit()
+            msg = 'You have successfully registered!'
+            db.close()
+            return redirect(url_for('login'))
+        
+    return render_template('signup.html', msg=msg)
+
+
+# login
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # forget any user id
-    session.clear()
-
-    if request.method == "POST":
-        # TODO - authenticate email and password, set session variable  
-        return redirect("chat.html")
-
-    return render_template("login.html")
+    msg = ''
+    if request.method == 'POST' and 'email' in request.form and 'password' in request.form:
+        email = request.form['email']
+        password = request.form['password']
+        db = opendb() 
+        cursor = db.cursor()
+        cursor.execute('SELECT * FROM users WHERE email = %s', (email))
+        account = cursor.fetchone()
+        db.close() 
+        if account and check_password_hash(account['password'], password):
+            session['loggedin'] = True
+            session['user_id'] = account['user_id']
+            session['email'] = account['email']
+            return render_template('index.html', msg='Logged in successfully!')
+        else:
+            msg = 'Incorrect username/password!'
+    return render_template('login.html', msg=msg)
     
+
 # logout 
 @app.route("/logout")
 def logout():
-    # forget any user id
-    session.clear()
-    return redirect("/")
+    session.pop('loggedin', None)
+    session.pop('user_id', None)
+    session.pop('username', None)
+    return redirect(url_for('login'))
+
 
 # change password TODO
 @app.route("/changepassword", methods=["GET", "POST"])
@@ -105,6 +130,15 @@ def delete():
     
     return render_template("settings.html")
 
+# delete data TODO
+@app.route("/deletedata", methods=["GET", "POST"])
+@login_required
+def deleteData():
+    if request.method == "POST":
+        # TODO
+        return render_template("settings.html")
+    
+    return render_template("settings.html")
 
 # main page - send a message to quick TODO
 @app.route("/", methods=["GET", "POST"])
@@ -129,7 +163,8 @@ def process():
 
         # dynamically render the result into the right area of the page 
         # redirect 
-        return "you should go to the shop"
+        # it needs to add more messages not just replace that one. so not render? 
+        return render_template("chat.html", reply=message)
     
     return render_template("chat.html")
 
@@ -140,14 +175,14 @@ def calculate(): # takes a dictionary
     return 
 
 # load chat history TODO
-@app.route("/chathistory", methods=["GET", "POST"])
+@app.route("/chathistory", methods=["GET"])
 @login_required
 def loadHistory():
-    if request.method == "POST":
-        # TODO - use messages table from database 
-        return redirect("")
-
-    return render_template("")
+    # TODO 
+    # method will always be get 
+    # when user goes to this page, show all the prev messages from the db 
+    # it will use render template thing to reload that same page 
+    return 
     
 # scanner TODO 
 @app.route("/scan", methods=["GET", "POST"])
@@ -159,5 +194,6 @@ def scan():
 
     return render_template("")
 
-
+if __name__ == "__main__":
+    app.run(debug=True)
 
