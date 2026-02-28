@@ -60,7 +60,6 @@ thresh = cv2.adaptiveThreshold(
 
 # Show processed image
 cv2.imshow("Processed Receipt", thresh)
-cv2.waitKey(0)
 cv2.destroyAllWindows()
 
 # Try multiple PSM modes
