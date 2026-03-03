@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ShopQuick — AI Assistant</title>
   <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 </head>
 <body>
@@ -14,7 +15,7 @@
   <!-- sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="logo">
-      <div class="logo-icon">✦</div>
+      <div class="logo-icon">🛒</div>
       <span class="logo-name">ShopQuick AI</span>
     </div>
 
@@ -37,15 +38,14 @@
       <!-- profile dropdown (opens upward) -->
       <div class="profile-dropdown" id="profileDropdown">
         <a href="#"> &nbsp;Manage Account</a>
-        <a href="#"> &nbsp;Settings</a>
         <hr/>
-        <a href="#"> &nbsp;Log In</a>
+        <a href="login.html"> &nbsp;Log In</a>
         <a href="#" class="danger"> &nbsp;Log Out</a>
       </div>
       <div class="sidebar-footer-inner" onclick="toggleProfile(event)">
-        <div class="avatar">>:)</div>
+        <div class="avatar">U</div>
         <div class="user-info">
-          <div class="user-name">Hannibal Lecter</div>
+          <div class="user-name">User1</div>
           <div class="user-plan">Pro plan</div>
         </div>
         <!-- little thing next to profile-->
@@ -65,23 +65,21 @@
         </svg>
       </button>
       <span class="chat-title" id="chatTitle">title here</span>
-      <div class="header-actions">
-        <!-- probably gonna delete these buttons-->
+      <!--<div class="header-actions">
+
         <button class="icon-btn" title="Share">↗</button>
         <button class="icon-btn" title="More">⋯</button>
-      </div>
+      </div>-->
     </header>
 
     <!-- new chat welcome -->
     <div class="welcome" id="welcomeState">
-      <div class="welcome-icon">✦</div>
+      <div class="welcome-icon">🛒</div>
       <h2>Hello, I'm ShopQuick AI</h2>
-      <p>Your AI assistant. Ask me anything — I'm here to help you think, write, and create.</p>
+      <p>I'm here to help you find the best deals.</p>
       <div class="suggestion-chips">
         <span class="chip" onclick="chipSend('Help me find the best deals')">Help me find the best deals</span>
-        <span class="chip" onclick="chipSend('Shops near me')">Shops near me</span>
-        <span class="chip" onclick="chipSend('smth smth')">smth smth</span>
-        <span class="chip" onclick="chipSend('uber')">uber</span>
+        <span class="chip" onclick="chipSend('Shops near me')">Upload receipts to receive points</span>
       </div>
     </div>
 
@@ -96,28 +94,18 @@
       </div>
 
       <div class="message ai">
-        <div class="msg-avatar ai">✦</div>
+        <div class="msg-avatar ai">🛒</div>
         <div>
           <div class="msg-content">
-            no<br><br>
-            <strong>this makes it bold</strong> random message here<br><br>
-            <strong>example 2</strong> <br><br>
+            Here are some great deals
           </div>
           <div class="msg-meta">ShopQuick AI · 10:43 AM</div>
         </div>
       </div>
 
-      <div class="message user">
-        <div class="msg-avatar user">>:)</div>
-        <div>
-          <div class="msg-content">safe</div>
-          <div class="msg-meta">10:45 AM</div>
-        </div>
-      </div>
-
       <!-- typing indicator -->
       <div class="message ai typing-indicator" id="typing">
-        <div class="msg-avatar ai">✦</div>
+        <div class="msg-avatar ai">🛒</div>
         <div class="msg-content">
           <div class="dot"></div><div class="dot"></div><div class="dot"></div>
         </div>
@@ -137,17 +125,11 @@
         <div class="input-actions">
           <!-- mic -->
           <button class="input-icon-btn" id="micBtn" title="Voice input" onclick="toggleMic()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-6 10a6 6 0 0 0 12 0h2a8 8 0 0 1-7 7.93V21h2v2H9v-2h2v-2.07A8 8 0 0 1 4 11H6z"/>
-            </svg>
+           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M320 64C267 64 224 107 224 160L224 288C224 341 267 384 320 384C373 384 416 341 416 288L416 160C416 107 373 64 320 64zM176 248C176 234.7 165.3 224 152 224C138.7 224 128 234.7 128 248L128 288C128 385.9 201.3 466.7 296 478.5L296 528L248 528C234.7 528 224 538.7 224 552C224 565.3 234.7 576 248 576L392 576C405.3 576 416 565.3 416 552C416 538.7 405.3 528 392 528L344 528L344 478.5C438.7 466.7 512 385.9 512 288L512 248C512 234.7 501.3 224 488 224C474.7 224 464 234.7 464 248L464 288C464 367.5 399.5 432 320 432C240.5 432 176 367.5 176 288L176 248z"/></svg>
           </button>
           <!-- attach files-->
           <button class="input-icon-btn" title="Attach file" onclick="document.getElementById('fileInput').click()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M352 173.3L352 384C352 401.7 337.7 416 320 416C302.3 416 288 401.7 288 384L288 173.3L246.6 214.7C234.1 227.2 213.8 227.2 201.3 214.7C188.8 202.2 188.8 181.9 201.3 169.4L297.3 73.4C309.8 60.9 330.1 60.9 342.6 73.4L438.6 169.4C451.1 181.9 451.1 202.2 438.6 214.7C426.1 227.2 405.8 227.2 393.3 214.7L352 173.3zM320 464C364.2 464 400 428.2 400 384L480 384C515.3 384 544 412.7 544 448L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 448C96 412.7 124.7 384 160 384L240 384C240 428.2 275.8 464 320 464zM464 488C477.3 488 488 477.3 488 464C488 450.7 477.3 440 464 440C450.7 440 440 450.7 440 464C440 477.3 450.7 488 464 488z"/></svg>
           </button>
           <input type="file" id="fileInput" onchange="handleFile(event)"/>
           <!-- send -->

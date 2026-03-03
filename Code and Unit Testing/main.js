@@ -72,7 +72,7 @@
       if (!file) return;
       showMessages();
       appendUserMessage(file.name);
-      simulateReply('reading file.');
+      simulateReply('reading recreipt.');
       e.target.value = '';
     }
 
@@ -84,14 +84,14 @@
       input.value = ''; input.style.height = 'auto';
       showMessages();
       appendUserMessage(text);
-      simulateReply('thats crazy bro.');
+      simulateReply('chat input.');
     }
 
     // when u choose a chat on newchat
     function chipSend(text) {
       showMessages();   
       appendUserMessage(text);
-      simulateReply('no.');
+      simulateReply('newchat .');
     }
 
     function showMessages() {
@@ -125,7 +125,7 @@
         const msg = document.createElement('div');
         msg.className = 'message ai';
         msg.innerHTML = `
-          <div class="msg-avatar ai">✦</div>
+          <div class="msg-avatar ai">🛒</div>
           <div>
             <div class="msg-content">${escapeHtml(text)}</div>
             <div class="msg-meta">ShopQuick AI · Just now</div>
