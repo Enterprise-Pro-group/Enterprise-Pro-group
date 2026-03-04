@@ -33,12 +33,14 @@ def calculate(user_request):  # takes a dictionary
     print(prefix)
     while len(prefix) > 2:
         test_query = f"""
-            SELECT COUNT(*) FROM stores
+            SELECT COUNT(*) AS store_count
+            FROM stores
             WHERE UPPER(REPLACE(postcode, ' ', '')) LIKE '{prefix}%'
         """
         cursor.execute(test_query)
-        count = cursor.fetchone()[0]
+        query_res = cursor.fetchone()
 
+        count = query_res["store_count"]
         if count > 0:
             break  # Found a usable prefix
 
