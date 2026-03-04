@@ -19,6 +19,7 @@ user_request = {
     "dietary_requirement": dietary_req,
 }
 
+print(user_request["postcode"])
 
 # function to calculate TODO
 def calculate(user_request):  # takes a dictionary
@@ -29,8 +30,8 @@ def calculate(user_request):  # takes a dictionary
 
     clean_postcode = "".join(user_request["postcode"].split()).upper()
     prefix = clean_postcode
+    print(prefix)
     while len(prefix) > 2:
-        # Try the full prefix first
         test_query = f"""
             SELECT COUNT(*) FROM stores
             WHERE UPPER(REPLACE(postcode, ' ', '')) LIKE '{prefix}%'
