@@ -211,7 +211,7 @@
 
     .chat-title {
       font-family: 'DM Serif Display', serif;
-      font-size: 18px; font-style: italic;
+      font-size: 18px; font-style: normal;
       flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 

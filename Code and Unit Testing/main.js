@@ -72,7 +72,7 @@
       if (!file) return;
       showMessages();
       appendUserMessage(file.name);
-      simulateReply('reading recreipt.');
+      simulateReply('reading receipt.');
       e.target.value = '';
     }
 
@@ -99,6 +99,7 @@
       document.getElementById('welcomeState').style.display = 'none';
     }
 
+    // user messages
     function appendUserMessage(text) {
       const messages = document.getElementById('messages');
       const typing = document.getElementById('typing');
@@ -106,7 +107,7 @@
       const msg = document.createElement('div');
       msg.className = 'message user';
       msg.innerHTML = `
-        <div class="msg-avatar user">>:)</div>
+        <div class="msg-avatar user">U</div>
         <div>
           <div class="msg-content">${escapeHtml(text)}</div>
           <div class="msg-meta">Just now</div>
@@ -116,6 +117,7 @@
       messages.scrollTop = messages.scrollHeight;
     }
 
+    // ai replies
     function simulateReply(text) {
       const messages = document.getElementById('messages');
       const typing = document.getElementById('typing');
