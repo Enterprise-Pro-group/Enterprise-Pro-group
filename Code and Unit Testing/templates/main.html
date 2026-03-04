@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ShopQuick — AI Assistant</title>
-  <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 </head>
@@ -39,7 +39,7 @@
       <div class="profile-dropdown" id="profileDropdown">
         <a href="#"> &nbsp;Manage Account</a>
         <hr/>
-        <a href="login.html"> &nbsp;Log In</a>
+       <a href="{{ url_for('login') }}">&nbsp;Log In</a>
         <a href="#" class="danger"> &nbsp;Log Out</a>
       </div>
       <div class="sidebar-footer-inner" onclick="toggleProfile(event)">
@@ -79,7 +79,7 @@
       <p>I'm here to help you find the best deals.</p>
       <div class="suggestion-chips">
         <span class="chip" onclick="chipSend('Help me find the best deals')">Help me find the best deals</span>
-        <span class="chip" onclick="chipSend('Shops near me')">Upload receipts to receive points</span>
+        <span class="chip" onclick="chipSend('Upload receipts to receive points')">Upload receipts to receive points</span>
       </div>
     </div>
 
@@ -140,6 +140,6 @@
     </div>
   </main>
 
-  <script src="main.js"></script>
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
 </html>
