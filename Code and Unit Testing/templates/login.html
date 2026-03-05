@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Login</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
    
@@ -15,7 +15,7 @@
             <input class="input" type="email" placeholder="Enter Email" required>
             <input class="input" type="password" placeholder="Enter Password" required>
             <button class="button" type="submit">LOGIN</button>
-              <p><a href="SignUp.html">Dont have an account .Sign up to to make one</a></p>
+              <p><a href="{{ url_for('SignUp') }}">Dont have an account .Sign up to to make one</a></p>
         </form>
     </div>
 </body>

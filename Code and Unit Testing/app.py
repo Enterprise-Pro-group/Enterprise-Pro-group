@@ -1,12 +1,20 @@
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 import pymysql
 from functools import wraps
 import re
+import os
+from werkzeug.utils import secure_filename
+from ReceiptScanner import process_receipt
 
 # configure app 
 app = Flask(__name__)
 app.secret_key = "stayhere"
+
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
 
 # connect to database 
 def opendb():
@@ -29,7 +37,17 @@ def after_request(response):
     response.headers["Pragma"] = "no-cache"
     return response
 
+@app.route('/login')
+def login():
+    return render_template('login.html')
 
+@app.route('/signup')
+def SignUp():
+    return render_template('SignUp.html')
+
+
+
+"""
 # decorarte routes to require login  
 def login_required(f):
     @wraps(f) # pass functions to this function first to require login 
@@ -189,17 +207,122 @@ def chat_history():
     # when user goes to this page, show all the prev messages from the db 
     # it will use render template thing to reload that same page 
     return 
-    
+
+"""
+
 # scanner TODO 
-@app.route("/scan", methods=["GET", "POST"])
-@login_required
+@app.route("/scan", methods=["POST"])
 def scan():
-    if request.method == "POST":
-        # TODO - 
-        return render_template("index.html")
+    if "receipt" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
 
-    return render_template("")
+    file = request.files["receipt"]
+    if file.filename == "":
+        return jsonify({"error": "Empty filename"}), 400
 
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+
+    try:
+        file.save(filepath)
+        extracted_data = process_receipt(filepath)
+
+        store_name = extracted_data.get("store_name") or ""
+        items = extracted_data.get("items") or []
+        location = extracted_data.get("location") or ""
+
+        validated_items = []
+        for item in items:
+            if "name" in item and "price" in item:
+                try:
+                    validated_items.append({
+                        "name": item["name"].strip(),
+                        "price": float(item["price"])
+                    })
+                except ValueError:
+                    continue
+
+        if len(validated_items) == 0:
+            return jsonify({
+                "is_receipt": False,
+            }), 200
+
+
+
+        return jsonify({
+            "is_receipt": True,
+            "store_name": store_name,
+            "items": validated_items,
+            "location": location
+        })
+    
+
+
+    
+
+    except Exception as e:
+        print("Scan error:", e)
+        return jsonify({"error": "Failed to process receipt"}), 500
+@app.route("/save-receipt", methods=["POST"])
+def save_receipt():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data sent"}), 400
+
+    store_name = data.get("store_name")
+    items = data.get("items", [])
+    location = data.get("location", "")
+
+    if not store_name or not items:
+        return jsonify({"error": "Invalid data"}), 400
+
+    db = opendb()
+    cursor = db.cursor()
+
+    try:
+        # 'name' → 'store_name' to match your schema
+        cursor.execute(
+            "SELECT id FROM stores WHERE store_name = %s AND location = %s",
+            (store_name, location)
+        )
+
+        if store := cursor.fetchone():
+            store_id = store["id"]
+        else:
+            cursor.execute(
+                "INSERT INTO stores (store_name, location) VALUES (%s, %s)",
+                (store_name, location)
+            )
+            db.commit()
+            store_id = cursor.lastrowid
+
+        for item in items:
+            # Removed trailing commas in column list and VALUES
+            cursor.execute("""
+                INSERT INTO products (product_name, price, store_id)
+                VALUES (%s, %s, %s)
+            """, (
+                item["name"].strip().title(),
+                float(item["price"]),
+                store_id
+            ))
+        
+
+        db.commit()
+        return jsonify({"message": "Receipt saved successfully!"})
+    
+
+    except Exception as e:
+        db.rollback()
+        print("Save error:", e)
+        return jsonify({"error": "Database error"}), 500
+
+    finally:
+        db.close()
+
+
+@app.route("/")
+def index():
+    return render_template("main.html")
 if __name__ == "__main__":
     app.run(debug=True)
-
