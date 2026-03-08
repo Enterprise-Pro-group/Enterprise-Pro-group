@@ -225,7 +225,7 @@ def process():
                     missing_reply = ", ".join(missing).replace('_', ' ')
                     return jsonify({"reply": f"I still need to know your: {missing_reply}."}) 
                 
-                return jsonify({"reply": "I've got that. What else can you tell me (budget, city, items)?"})
+                return jsonify({"reply": "I've got that. What else can you tell me?"})
 
         # STAGE 2 - CONFIRM  
         elif session["stage"] == "confirm":           
@@ -237,11 +237,30 @@ def process():
             if affirmed:
                 # call calculate function and pass in the dictionary from session data 
                 result = calculate(session["data"])
-                reply = result
 
-                # build reply 
-                # TODO 
+                # build reply from the reply that calculate returns 
+                #reply = result #temp 
+
+                # intro 
+                reply = "Okay! I've found the best prices for you:\n\n"
+
+                # loop through items in result and add to the reply
+                for item_name, info in result["items"].items():
+                    if info:
+                        # Format: - Bread: £1.20 at Tesco (123 High St)
+                        reply += f"• **{item_name.capitalize()}**: £{info['price']:.2s} at {info['store_name']} ({info['address']})\n"
+                    else:
+                        reply += f"• **{item_name.capitalize()}**: Sorry, I couldn't find this nearby.\n"
                 
+                # add total cost summary
+                reply += f"\n**Total Cost**: £{result['total_cost']:.2s}"
+
+                # note about budget
+                if result["within_budget"]:
+                    reply += "\n✅ This is within your budget!"
+                else:
+                    reply += "\n⚠️ This is slightly over your budget."
+
                 # reset the session data and set stage back to extract ready for the next message 
                 session.pop("data", None)
                 session["stage"] = "extract"
@@ -254,11 +273,11 @@ def process():
                 # return a message saying is this correct? if not please tell me what to change.
                 return jsonify({"reply": "I've updated that for you. To confirm, you are in {session['data']['city'].title()} ({session['data']['postcode']}) with a budget of £{session['data']['budget']} for: {items}. {diet} Is it correct now?"})  
 
-        return jsonify({"reply": "I'm listening! Please tell me your budget, city, postcode, or items."})      
+        return jsonify({"reply": "I'm listening! Please tell me your budget, city, postcode, and items."})      
         #return jsonify({"reply": message})
         #return render_template("chat.html", reply=message)
     
-    return render_template("chat.html")
+    return render_template("main.html")
 
 
 # extract data from message and directly update the session variable 
@@ -353,17 +372,86 @@ def extract(doc, message):
     data["shopping_list"] = current_list # add modofied shopping list to dictionary 
     session["data"] = data # put dictionary back in session dictionary 
 
-    print(f"city: {session['data']['city']}")
-    print(f"budget: {session['data']['budget']}")
-    print(f"postcode: {session['data']['postcode']}")
-    print(f"diet: {session['data']['dietary_requirement']}")
-    print(f"shopping: {session['data']['shopping_list']}")
+    # print(f"city: {session['data']['city']}")
+    # print(f"budget: {session['data']['budget']}")
+    # print(f"postcode: {session['data']['postcode']}")
+    # print(f"diet: {session['data']['dietary_requirement']}")
+    # print(f"shopping: {session['data']['shopping_list']}")
 
 
 # function to calculate 
 def calculate(user_request): # takes a dictionary 
     # return list of shops to get items from 
-    return "go to the shop"
+    try:
+        conn = opendb()
+    except Exception as e:
+        print(f"Connection Error: {e}")
+        return "Database Error"
+    cursor = conn.cursor()  # Creating a cursor
+
+    clean_postcode = "".join(user_request["postcode"].split()).upper()
+    prefix = clean_postcode
+    print(prefix)
+    while len(prefix) > 2:
+        test_query = f"""
+            SELECT COUNT(*) AS store_count
+            FROM stores
+            WHERE UPPER(REPLACE(postcode, ' ', '')) LIKE '{prefix}%'
+        """
+        cursor.execute(test_query)
+        query_res = cursor.fetchone()
+
+        count = query_res["store_count"]
+        if count > 0:
+            break  # Found a usable prefix
+
+        prefix = prefix[:-1]  # Remove last character
+
+    final_products = {}
+    total_cost = 0
+
+    for product in user_request["shopping_list"]:
+        query = f"""
+                    SELECT p.id, p.product_name, p.price, s.id, s.store_name, s.address, s.postcode, s.city
+                    FROM products p
+                    JOIN stores s on p.store_id = s.id
+                    WHERE s.city LIKE '%{user_request["city"]}%'
+                    AND REPLACE(s.postcode, ' ', '') LIKE '%{prefix}%'
+                    AND p.product_name LIKE '%{product}%'
+                    ORDER BY p.price ASC
+                    LIMIT 1
+                """
+
+        cursor.execute(query)  # Execute query
+        cheapest_product = cursor.fetchone()  # Get the first row of query
+
+        final_products[product] = cheapest_product
+        total_cost += cheapest_product["price"]
+
+    conn.close()
+
+    result = {
+        "items": final_products,
+        "total_cost": total_cost,
+        "within_budget": total_cost <= user_request["budget"],
+    }
+
+    # for item in result["items"]:
+    #     info = result["items"][item]
+    #     print(
+    #         "You can buy",
+    #         info["product_name"],
+    #         "from",
+    #         info["store_name"],
+    #         info["address"],
+    #         info["postcode"],
+    #         "for £",
+    #         info["price"],
+    #     )
+    # print("Total Cost: £", result["total_cost"])
+
+    return result
+    #return "go to the shop"
 
 
 # load chat history TODO
