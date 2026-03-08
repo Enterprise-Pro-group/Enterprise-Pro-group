@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ShopQuick — AI Assistant</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+  <!-- sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="logo-icon">✦</div>
+      <span class="logo-name">ShopQuick AI</span>
+    </div>
+
+    <button class="new-chat-btn" onclick="newChat()">
+      <span>+</span> New Chat
+    </button>
+
+    <div class="sidebar-section-label">Recent</div>
+    <!-- the brackets changes the top part-->
+    <div class="chat-history">
+      <div class="chat-history-item active" onclick="selectChat(this, 'chat1')">chat1</div>
+      <div class="chat-history-item" onclick="selectChat(this, 'chat2')">chat2</div>
+      <div class="chat-history-item" onclick="selectChat(this, 'chat3')">chat3</div>
+      <div class="chat-history-item" onclick="selectChat(this, 'chat4')">chat4</div>
+      <div class="chat-history-item" onclick="selectChat(this, 'chat5')">chat5</div>
+      <div class="chat-history-item" onclick="selectChat(this, 'chat6')">chat6</div>
+    </div>
+
+    <div class="sidebar-footer">
+      <!-- profile dropdown (opens upward) -->
+      <div class="profile-dropdown" id="profileDropdown">
+        <a href="#"> &nbsp;Manage Account</a>
+        <a href="#"> &nbsp;Settings</a>
+        <hr/>
+        <a href="#"> &nbsp;Log In</a>
+        <a href="#" class="danger"> &nbsp;Log Out</a>
+      </div>
+      <div class="sidebar-footer-inner" onclick="toggleProfile(event)">
+        <div class="avatar">>:)</div>
+        <div class="user-info">
+          <div class="user-name">Hannibal Lecter</div>
+          <div class="user-plan">Pro plan</div>
+        </div>
+        <!-- little thing next to profile-->
+        <span class="chevron" id="profileChevron">▲</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- main -->
+  <main class="main">
+    <header class="chat-header">
+      <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="Toggle sidebar">
+        <svg width="15" height="12" viewBox="0 0 15 12" fill="currentColor">
+          <rect width="15" height="1.8" rx="1"/>
+          <rect y="5.1" width="15" height="1.8" rx="1"/>
+          <rect y="10.2" width="15" height="1.8" rx="1"/>
+        </svg>
+      </button>
+      <span class="chat-title" id="chatTitle">title here</span>
+      <div class="header-actions">
+        <!-- probably gonna delete these buttons-->
+        <button class="icon-btn" title="Share">↗</button>
+        <button class="icon-btn" title="More">⋯</button>
+      </div>
+    </header>
+
+    <!-- new chat welcome -->
+    <div class="welcome" id="welcomeState">
+      <div class="welcome-icon">✦</div>
+      <h2>Hello, I'm ShopQuick AI</h2>
+      <p>Your AI assistant. Ask me anything — I'm here to help you think, write, and create.</p>
+      <div class="suggestion-chips">
+        <span class="chip" onclick="chipSend('Help me find the best deals')">Help me find the best deals</span>
+        <span class="chip" onclick="chipSend('Shops near me')">Shops near me</span>
+        <span class="chip" onclick="chipSend('smth smth')">smth smth</span>
+        <span class="chip" onclick="chipSend('uber')">uber</span>
+      </div>
+    </div>
+
+    <!-- messages -->
+    <div class="messages" id="messages">
+      <div class="message user">
+        <div class="msg-avatar user">>:)</div>
+        <div>
+          <div class="msg-content">help me find best deals NOW</div>
+          <div class="msg-meta">10:42 AM</div>
+        </div>
+      </div>
+
+      <div class="message ai">
+        <div class="msg-avatar ai">✦</div>
+        <div>
+          <div class="msg-content">
+            no<br><br>
+            <strong>this makes it bold</strong> random message here<br><br>
+            <strong>example 2</strong> <br><br>
+          </div>
+          <div class="msg-meta">ShopQuick AI · 10:43 AM</div>
+        </div>
+      </div>
+
+      <div class="message user">
+        <div class="msg-avatar user">>:)</div>
+        <div>
+          <div class="msg-content">safe</div>
+          <div class="msg-meta">10:45 AM</div>
+        </div>
+      </div>
+
+      <!-- typing indicator -->
+      <div class="message ai typing-indicator" id="typing">
+        <div class="msg-avatar ai">✦</div>
+        <div class="msg-content">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- input Area -->
+    <div class="input-area">
+      <div class="input-wrapper">
+        <textarea
+          id="userInput"
+          rows="1"
+          placeholder="Ask ShopQuick AI anything…"
+          oninput="autoResize(this)"
+          onkeydown="handleKey(event)"
+        ></textarea>
+        <div class="input-actions">
+          <!-- mic -->
+          <button class="input-icon-btn" id="micBtn" title="Voice input" onclick="toggleMic()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-6 10a6 6 0 0 0 12 0h2a8 8 0 0 1-7 7.93V21h2v2H9v-2h2v-2.07A8 8 0 0 1 4 11H6z"/>
+            </svg>
+          </button>
+          <!-- attach files-->
+          <button class="input-icon-btn" title="Attach file" onclick="document.getElementById('fileInput').click()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </button>
+          <input type="file" id="fileInput" name="receipt" onchange="handleFile(event)">
+          <!-- send -->
+          <button class="send-btn" onclick="sendMessage()" title="Send">↑</button>
+        </div>
+      </div>
+      <div class="input-footer">ShopQuick AI can make mistakes. Verify important information.</div>
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
+
+</body>
+</html>

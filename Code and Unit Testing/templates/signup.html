@@ -1,19 +1,25 @@
-{% extends "layoutlogin.html" %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block title %}
-Sign Up
-{% endblock %}
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign In</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='loginstyle.css') }}">
+</head>
 
-{% block main %}
-<div class="card">
-    <h1 class="title">SIGN UP</h1>
+<body>
+    <div class="card">
+        <h1 class="title">SIGN UP</h1>
 
-    <form class="form" action="/signup" method="POST">
-        <input class="input" type="email" name="email" placeholder="Enter Email" required>
-        <input class="input" type="password" name="password" placeholder="Enter Password" required>
-        <input class="input" type="password" placeholder="confirm password" required>
+        <form class="form" action="/signup" method="POST">
+            <input class="input" type="email" name="email" placeholder="Enter Email" required>
+            <input class="input" type="password" name="password" placeholder="Enter Password" required>
+            <input class="input" type="password" placeholder="confirm password" required>
+            <button class="button" type="submit">Sign up</button>
+            <p><a href="{{ url_for('login') }}">Already have an account? Log in</a></p>
+        </form>
+    </div>
+</body>
 
-        <button class="button" type="submit">Sign up</button>
-    </form>
-</div>
-{% endblock %}
+</html>

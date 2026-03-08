@@ -1,13 +1,27 @@
-{% extends "layout.html" %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block title %}
-MENU
-{% endblock %}
+<head>
+    <title> Chat History </title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='loginstyle.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
 
-{% block main %}
-<div class="card">
-    <h1 class="title">chat history</h1>
-    <p>will display chat history from db</p>
-</div>
+<body>
+    <div class="card">
+        <div>
+            <a href="{{ url_for('settings') }}" class="button">☰</a>
+            <a href="{{ url_for('process') }}" class="button">SHOPQUICK</a>
+        </div>
+    </div>
+    <br>
+    <div class="card">
+        <h1 class="title">chat history</h1>
+        <p>will display chat history from db</p>
+    </div>
 
-{% endblock %}
+</body>
+
+</html>

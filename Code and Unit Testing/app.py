@@ -1,12 +1,20 @@
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import pymysql
 from functools import wraps
 import re
+import spacy
+from word2number import w2n
 
 # configure app 
 app = Flask(__name__)
 app.secret_key = "stayhere"
+
+# configure session to use filesystem instead of signed cookies 
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_TYPE"] = "filesystem"
+Session(app)
 
 # connect to database 
 def opendb():
@@ -19,6 +27,17 @@ def opendb():
         cursorclass=pymysql.cursors.DictCursor
     )
     return db
+
+# load the nlp for extracting function 
+nlp = spacy.load('en_core_web_lg')
+ruler = nlp.add_pipe("entity_ruler", before="ner")
+patterns = [
+    {"label": "GPE", "pattern": [{"LOWER": "shipley"}]},
+    {"label": "DIET", "pattern": [{"LOWER": "halal"}]},
+    {"label": "DIET", "pattern": [{"LOWER": "vegan"}]},
+    {"label": "DIET", "pattern": [{"LOWER": "vegetarian"}]}
+]
+ruler.add_patterns(patterns)
 
 # no cache 
 @app.after_request
@@ -61,7 +80,7 @@ def signup():
             msg = 'Please fill out the form!'
         else:
             passwordhash = generate_password_hash(password)
-            cursor.execute('INSERT INTO users (email, password_hash) VALUES (%s, %s)', (email, passwordhash))
+            cursor.execute('INSERT INTO users (email, password) VALUES (%s, %s)', (email, passwordhash))
             db.commit()
             msg = 'You have successfully registered!'
             db.close()
@@ -79,15 +98,16 @@ def login():
         password = request.form['password']
         db = opendb() 
         cursor = db.cursor()
-        cursor.execute('SELECT * FROM users WHERE email = %s', (email))
+        cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
         account = cursor.fetchone()
         db.close() 
 
-        if account and check_password_hash(account['password_hash'], password):
+        if account and check_password_hash(account['password'], password):
             session['loggedin'] = True
             session['user_id'] = account['user_id']
             session['email'] = account['email']
-            return render_template('chat.html', msg='Logged in successfully!')
+            return redirect(url_for("process"))
+            #return render_template('chat.html', msg='Logged in successfully!')
         else:
             msg = 'Incorrect username/password!'
     return render_template('login.html', msg=msg)
@@ -101,9 +121,11 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('login'))
 
+
 @app.route("/settings")
 def settings():
     return render_template("settings.html")
+
 
 # change password TODO
 @app.route("/changepassword", methods=["GET", "POST"])
@@ -152,33 +174,197 @@ def delete_history():
 @login_required
 def process():
     if request.method == "POST":
-        # TODO 
-        message = request.form["message"] # get the user's message 
-        # add to db 
+        # get the user's message 
+        message = request.json["message"] 
 
-        # extract the data from user input and store in dictionary 
+        # add that message to the db with the time stamp and the role of user 
+        # every time it sends a message it needs to add that to the db 
 
-        # ask user if its correct 
-        # understand that and amend dictionary 
+        # session variables 
+        if "stage" not in session:
+            session["stage"] = "extract"
+        
+        if "data" not in session:
+            session["data"] = {
+                "budget": None,
+                "shopping_list": [],
+                "city": None,
+                "postcode": None,
+                "dietary_requirement": None
+            }
 
-        # when validated call calculate on the dictionary 
-        # calculate will return the shops to go to 
+        # pass message to nlp to make doc variable
+        doc = nlp(message)
 
-        # write the shops into a nice message 
-        # add to db 
+        # STAGE 1 - EXTRACT
+        if session["stage"] == "extract":
+            # call extract function on doc. it will directly update the session data dictionary 
+            extract(doc, message) 
 
-        # dynamically render the result into the right area of the page 
-        # redirect 
-        # it needs to add more messages not just replace that one. so not render? 
-        return render_template("chat.html", reply=message)
+            # if session dictionary has everything filled
+            has_budget   = bool(session["data"].get("budget"))
+            has_city     = bool(session["data"].get("city"))
+            has_postcode = bool(session["data"].get("postcode"))
+            has_items    = bool(session["data"].get("shopping_list"))   
+
+            if all([has_budget, has_city, has_postcode, has_items]):
+                # format 
+                items = ", ".join(session["data"].get("shopping_list", []))
+                diet = f" (Diet: {session['data']['dietary_requirement']})" if session['data']['dietary_requirement'] else ""
+        
+                # make summary message 
+                summary = f"Okay! To confirm, you are in {session['data']['city'].title()} ({session['data']['postcode']}) with a budget of £{session['data']['budget']} for: {items}. {diet} Is this correct?"
+        
+                session["stage"] = "confirm"   
+                return jsonify({"reply": summary})
+            
+            else:
+                mandatory = ["budget", "shopping_list", "city", "postcode"]
+                missing = [k for k in mandatory if not session["data"].get(k)]
+                if missing:
+                    missing_reply = ", ".join(missing).replace('_', ' ')
+                    return jsonify({"reply": f"I still need to know your: {missing_reply}."}) 
+                
+                return jsonify({"reply": "I've got that. What else can you tell me (budget, city, items)?"})
+
+        # STAGE 2 - CONFIRM  
+        elif session["stage"] == "confirm":           
+            # detect if answer is confirmation or negation 
+            affirmation = ["yes", "yeah", "correct", "right", "yh", "ok", "confirm"]
+            affirmed = any(word in message.lower() for word in affirmation)
+
+            # if answer is a confirmation 
+            if affirmed:
+                # call calculate function and pass in the dictionary from session data 
+                result = calculate(session["data"])
+                reply = result
+
+                # build reply 
+                # TODO 
+                
+                # reset the session data and set stage back to extract ready for the next message 
+                session.pop("data", None)
+                session["stage"] = "extract"
+                return jsonify({"reply": reply})
+
+            # else if answer is a negation  
+            else:
+                session["stage"] = "extract" # set stage to extract 
+                extract(doc, message) # call extract function on this message and update data
+                # return a message saying is this correct? if not please tell me what to change.
+                return jsonify({"reply": "I've updated that for you. To confirm, you are in {session['data']['city'].title()} ({session['data']['postcode']}) with a budget of £{session['data']['budget']} for: {items}. {diet} Is it correct now?"})  
+
+        return jsonify({"reply": "I'm listening! Please tell me your budget, city, postcode, or items."})      
+        #return jsonify({"reply": message})
+        #return render_template("chat.html", reply=message)
     
     return render_template("chat.html")
 
-# function to calculate TODO
-def calculate(): # takes a dictionary 
-    # TODO 
+
+# extract data from message and directly update the session variable 
+def extract(doc, message): 
+    # pull session dictionary 
+    data = session["data"]
+    numbers = []
+
+    # extract full and partial postcodes  
+    postcode_pattern = r'([A-Z]{1,2}[0-9][A-Z0-9]?)(?: ?([0-9][A-Z]{2}))?'
+    match = re.search(postcode_pattern, message.upper())
+    if match:
+        if match.group(2):
+            pc = f"{match.group(1)} {match.group(2)}" # join postcode parts
+        else:
+            pc = match.group(1) # only first part of postcode 
+        data["postcode"] = pc
+    
+    # extract locations and requirements with ner 
+    for ent in doc.ents:
+        if ent.label_ == "GPE":
+            if re.match(postcode_pattern, ent.text.upper()): # ignore postcodes 
+                continue
+            data["city"] = ent.text.lower()
+
+        elif ent.label_ == "DIET":
+            data["dietary_requirement"] = ent.text.lower()
+                #data["dietary_requirements"].append(ent.text.lower())
+
+    # extract all numbers
+    for token in doc:
+        if token.like_num:
+            try:
+                number = w2n.word_to_num(token.text)
+                numbers.append(number)
+            except ValueError:
+                    continue 
+            
+    # from numbers add the highest one to data[budget] 
+    if numbers:
+        data["budget"] = max(numbers)
+
+    # extract nouns for shopping list items 
+    current_list = data.get("shopping_list", [])
+
+    for chunk in doc.noun_chunks:
+        # get the root (main noun in the chunk - one token) 
+        # get the head of that root (usually verb it belongs to - eg want in i dont want cake)
+  
+        # check if the verb is negated (i dont want cake)
+        # check the verb for any neg child 
+        verb_negated = any(t.dep_ == "neg" for t in chunk.root.head.children)
+
+        # check if the noun itself is negated (i want no cake)
+        # just check if any word in the chunk has a neg label bc the noun chunk already only includes the nouns children 
+        chunk_negated = any(t.dep_ == "neg" for t in chunk)
+
+        # exclude common words 
+        exclude = [
+            "budget", "price", "money", "cost", "limit", "amount", "product", "pound",
+            "location", "area", "city", "town", "postcode", "house",
+            "list", "item", "thing", "stuff", "food", "shopping",
+            "store", "shop", "supermarket", "grocer",
+            "requirement", "restriction", "diet", "preference", "vegetarian", "vegan"
+        ]
+
+        # add to list if not in negated or excluded 
+        # lemmatise to deal w plurals 
+        item = chunk.root.lemma_.lower().strip()
+
+        if chunk.root.pos_ == "PRON" or chunk.root.ent_type_ in ("PERSON", "GPE", "NORP", "ORG"):
+            continue
+
+        if re.match(postcode_pattern, chunk.text.upper()): 
+            continue
+
+        if item in exclude or any(word in chunk.text.lower() for word in exclude):
+            continue # exit this iteration and go to the next noun chunk 
+        
+        if verb_negated or chunk_negated: # if on negated list, remove it 
+            if item in current_list:
+                current_list.remove(item)
+                print(f"REMOVED: {item}")
+        else: 
+            if item not in current_list:
+                current_list.append(item)
+                print(f"ADDED: {item}")
+
+        # check children for nummod (number modifier) to get quantity of each item? 
+
+    # Save to session  
+    data["shopping_list"] = current_list # add modofied shopping list to dictionary 
+    session["data"] = data # put dictionary back in session dictionary 
+
+    print(f"city: {session['data']['city']}")
+    print(f"budget: {session['data']['budget']}")
+    print(f"postcode: {session['data']['postcode']}")
+    print(f"diet: {session['data']['dietary_requirement']}")
+    print(f"shopping: {session['data']['shopping_list']}")
+
+
+# function to calculate 
+def calculate(user_request): # takes a dictionary 
     # return list of shops to get items from 
-    return 
+    return "go to the shop"
+
 
 # load chat history TODO
 @app.route("/chathistory", methods=["GET"])
@@ -189,7 +375,8 @@ def chat_history():
     # when user goes to this page, show all the prev messages from the db 
     # it will use render template thing to reload that same page 
     return 
-    
+
+
 # scanner TODO 
 @app.route("/scan", methods=["GET", "POST"])
 @login_required

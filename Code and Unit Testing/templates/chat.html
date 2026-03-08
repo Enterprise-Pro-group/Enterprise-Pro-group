@@ -1,30 +1,60 @@
-{% extends "layout.html" %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block title %}
-Ask Quick
-{% endblock %}
+<head>
+    <title> Ask Quick </title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='loginstyle.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
 
-{% block main %}
-<div class="card">
-    <h3>hello how can i help you today?</h3>
+<body>
 
-    <form class="form" action="/chat" method="POST">
-        <input class="input" type="text" name="message" placeholder="type your query here..." required>
-        <button class="button" type="submit">ASK QUICK</button>
-    </form>
+    <div class="card">
+        <h3>hello how can i help you today?</h3>
 
-    <!-- dynamically insert the reply -->
-    
-    {% if reply %}
-    <br>
-    <div class="button">
-        {{ reply }}
+        <br>
+        <div id="chat-box"></div> <!-- dynamically insert the reply here -->
+        <br>
+
+        <form onsubmit="sendMessage(event)">
+            <input class="input" type="text" name="message" id="message" placeholder="type your query here..." required>
+            <button class="button" type="submit">ASK QUICK</button>
+        </form>
     </div>
-    {% endif %} 
-    
-    <!-- dynamically insert the next input box if needed -->
 
-    <!-- dynamically insert the reply and keep doing that until done -->
-</div>
+    <script>
+        async function sendMessage(event) {
+            event.preventDefault() // stop form from submiting 
 
-{% endblock %}
+            // get users message - already done in main.js 
+            const message = document.getElementById("message").value
+
+            // display the users message - apend user message already does this in main.js 
+            const chatBox = document.getElementById("chat-box");
+            chatBox.innerHTML += "<div class='button'>" + message + "</div>";
+
+            // will go in sendMessage
+            // send to flask using fetch to make it reply  
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json() // wait for flask response
+                // flask will return a json w a key reply w the reply 
+                chatBox.innerHTML += "<div class='button'>" + data.reply + "</div>"; // show reply
+
+            } catch (error) {
+                console.error()
+            }
+        }
+    </script>
+</body>
+
+</html>
