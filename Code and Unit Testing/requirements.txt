@@ -2,3 +2,6 @@ Flask==3.0.2
 PyMySQL==1.1.0
 spaCy
 word2number
+opencv-python==4.8.1.78
+imutils
+pytesseract
