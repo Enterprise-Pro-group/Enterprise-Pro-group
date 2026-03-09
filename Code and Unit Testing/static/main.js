@@ -107,11 +107,22 @@ function displayReceiptInChat(data) {
     
     <br><br>
   
-  <p><strong>Location:</strong></p>
+  <p><strong>Address:</strong></p>
     <input id="StoreAddress" value="${data.store_address || ''}">
+
+  <p><strong>City:</strong></p>
+    <input id="StoreCity" value="${data.store_city || ''}">
+
+
+  <p><strong>Postcode:</strong></p>
+  <input id="StorePostcode" placeholder="Enter postcode">  
 
 
     <p><strong>Items:</strong></p>
+
+
+
+
   `;
 
   data.items.forEach((item) => {
@@ -136,11 +147,10 @@ async function saveReceipt() {
   const store_address = document.getElementById("StoreAddress").value.trim();
   const product_names = document.querySelectorAll(".ProductName");
   const product_prices = document.querySelectorAll(".ProductPrice");
+  const store_postcode = document.getElementById("StorePostcode").value.trim();
+  const  store_city = document.getElementById("StoreCity").value.trim();
 
-  if (!store_name || !store_address) {
-    simulateReply("Enter store name and address.");
-    return;
-  }
+ 
 
   const items = [];
 
@@ -148,8 +158,8 @@ async function saveReceipt() {
     const name = product_names[i].value.trim();
     const price = parseFloat(product_prices[i].value);
 
-    if (!name || isNaN(price)) {
-      simulateReply("Enter valid product name and price for all items.");
+    if (!name || isNaN(price) || !store_postcode || !store_city || !store_address || !store_name) {
+      simulateReply("Enter valid details for all items .");
       return;
     }
 
@@ -168,7 +178,10 @@ async function saveReceipt() {
       body: JSON.stringify({
         store_name,
         store_address,
+        store_postcode,
+        store_city,
         items
+        
       })
     });
 

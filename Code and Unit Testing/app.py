@@ -270,6 +270,8 @@ def save_receipt():
     store_name = data.get("store_name")
     items = data.get("items", [])
     store_address = data.get("store_address", "")
+    store_postcode = data.get("store_postcode", "")
+    store_city = data.get("store_city", "")
 
     if not store_name or not items:
         return jsonify({"error": "Invalid data"}), 400
@@ -288,8 +290,8 @@ def save_receipt():
             store_id = store["store_id"]
         else:
             cursor.execute(
-                "INSERT INTO stores (store_name, store_address) VALUES (%s, %s)",
-                (store_name, store_address)
+                "INSERT INTO stores (store_name, store_address ,store_postcode, store_city) VALUES (%s, %s, %s, %s)",
+                (store_name, store_address, store_postcode ,store_city )
             )
             db.commit()
             store_id = cursor.lastrowid
