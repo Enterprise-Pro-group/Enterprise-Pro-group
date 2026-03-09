@@ -133,7 +133,6 @@ def logout():
 def settings():
     return render_template("settings.html")
 
-
 # change password TODO
 @app.route("/changepassword", methods=["GET", "POST"])
 @login_required
@@ -175,7 +174,7 @@ def delete_history():
     return render_template("settings.html")
 
 
-# main page - send a message to quick TODO
+# main chatbot page 
 @app.route("/", methods=["GET", "POST"])
 @app.route("/chat", methods=["GET", "POST"])
 @login_required
@@ -244,9 +243,8 @@ def process():
             if affirmed:
                 # call calculate function and pass in the dictionary from session data 
                 result = calculate(session["data"])
-
-                # build reply from the reply that calculate returns 
-                #reply = result #temp 
+                if not isinstance(result, dict):
+                    return jsonify({"reply": f"Sorry, I encountered an error trying to connect to the server."})
 
                 # intro 
                 reply = "Okay! I've found the best prices for you:\n\n"
@@ -255,7 +253,7 @@ def process():
                 for item_name, info in result["items"].items():
                     if info:
                         # Format: - Bread: £1.20 at Tesco (123 High St)
-                        reply += f"• **{item_name.capitalize()}**: £{info['price']:.2s} at {info['store_name']} ({info['address']})\n"
+                        reply += f"• **{item_name.capitalize()}**: £{info['price']:.2f} at {info['store_name']} ({info['address']})\n"
                     else:
                         reply += f"• **{item_name.capitalize()}**: Sorry, I couldn't find this nearby.\n"
                 
@@ -277,8 +275,14 @@ def process():
             else:
                 session["stage"] = "extract" # set stage to extract 
                 extract(doc, message) # call extract function on this message and update data
-                # return a message saying is this correct? if not please tell me what to change.
-                return jsonify({"reply": "I've updated that for you. To confirm, you are in {session['data']['city'].title()} ({session['data']['postcode']}) with a budget of £{session['data']['budget']} for: {items}. {diet} Is it correct now?"})  
+
+                # format summary 
+                items = ", ".join(session["data"].get("shopping_list", []))
+                diet = f" (Diet: {session['data']['dietary_requirement']})" if session['data']['dietary_requirement'] else ""
+
+                # make summary message
+                summary = f"I've updated that for you. To confirm, you are in {session['data']['city'].title()} ({session['data']['postcode']}) with a budget of £{session['data']['budget']} for: {items}. {diet} Is this correct now?"
+                return jsonify({"reply": summary})  
 
         return jsonify({"reply": "I'm listening! Please tell me your budget, city, postcode, and items."})      
         #return jsonify({"reply": message})
@@ -419,11 +423,11 @@ def calculate(user_request): # takes a dictionary
 
     for product in user_request["shopping_list"]:
         query = f"""
-                    SELECT p.id, p.product_name, p.price, s.id, s.store_name, s.address, s.postcode, s.city
+                    SELECT p.product_id, p.product_name, p.product_price, s.store_id, s.store_name, s.store_address, s.store_postcode, s.store_city
                     FROM products p
-                    JOIN stores s on p.store_id = s.id
-                    WHERE s.city LIKE '%{user_request["city"]}%'
-                    AND REPLACE(s.postcode, ' ', '') LIKE '%{prefix}%'
+                    JOIN stores s on p.store_id = s.store_id
+                    WHERE s.store_city LIKE '%{user_request["city"]}%'
+                    AND REPLACE(s.store_postcode, ' ', '') LIKE '%{prefix}%'
                     AND p.product_name LIKE '%{product}%'
                     ORDER BY p.price ASC
                     LIMIT 1
@@ -472,7 +476,7 @@ def chat_history():
     return 
 
 
-# scanner TODO 
+# scanner
 @app.route("/scan", methods=["POST"])
 def scan():
     if "receipt" not in request.files:
@@ -523,6 +527,7 @@ def scan():
         return jsonify({"error": "Failed to process receipt"}), 500
 
 
+# save receipt data
 @app.route("/save-receipt", methods=["POST"])
 def save_receipt():
     data = request.get_json()

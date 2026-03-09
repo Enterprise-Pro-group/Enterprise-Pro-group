@@ -5,7 +5,7 @@ import pytesseract #an interface to the Tesseract OCR engine
 import re #regular expressions for pattern matching
 from imutils.perspective import four_point_transform # applies a birds-eye view of an input image
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Users\MH103\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+#pytesseract.pytesseract.tesseract_cmd = r"C:\Users\MH103\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
 
 
 def process_receipt(image_path):

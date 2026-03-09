@@ -44,7 +44,7 @@
         <a href="#"> &nbsp;Manage Account</a>
         <hr />
         <a href="{{ url_for('login') }}">&nbsp;Log In</a>
-        <a href="#" class="danger"> &nbsp;Log Out</a>
+        <a href="{{ url_for('logout') }}" class="danger"> &nbsp;Log Out</a>
       </div>
       <div class="sidebar-footer-inner" onclick="toggleProfile(event)">
         <div class="avatar">U</div>
@@ -82,8 +82,8 @@
       <h2>Hello, I'm ShopQuick AI</h2>
       <p>I'm here to help you find the best deals.</p>
       <div class="suggestion-chips">
-        <span class="chip" onclick="chipSend('Help me find the best deals')">Help me find the best deals</span>
-        <span class="chip" onclick="chipSend('Upload receipts to receive points')">Upload receipts to receive
+        <span class="chip" onclick="chipSend('Help me find the best deals', 'Let me know your shopping list, budget, postcode, city, and any dietary requirements and I will find you the best deals.')">Help me find the best deals</span>
+        <span class="chip" onclick="chipSend('Upload receipts to receive points', 'Sure! Please upload your receipt using the icon below to earn points.')">Upload receipts to receive
           points</span>
       </div>
     </div>

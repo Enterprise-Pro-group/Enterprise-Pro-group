@@ -224,11 +224,10 @@ async function sendMessage() {
 }
 
 // when u choose a chat on newchat
-function chipSend(text) {
+function chipSend(text, reply) {
   showMessages();
   appendUserMessage(text);
-  sendMessage(text);
-  //simulateReply('newchat .');
+  simulateReply(reply);
 }
 
 function showMessages() {
@@ -260,7 +259,7 @@ function simulateReply(text) {
   const typing = document.getElementById('typing');
   messages.scrollTop = messages.scrollHeight;
   setTimeout(() => {
-    typing.remove();
+    if (typing) typing.style.display = 'none';
     const msg = document.createElement('div');
     msg.className = 'message ai';
     msg.innerHTML = `
@@ -284,7 +283,7 @@ function reply(text) {
   msg.innerHTML = `
     <div class="msg-avatar ai">🛒</div>
     <div>
-      <div class="msg-content">${escapeHtml(text)}</div>
+      <div class="msg-content">${(text)}</div>
       <div class="msg-meta">ShopQuick AI · Just now</div>
     </div>`;
 
@@ -297,4 +296,4 @@ function escapeHtml(str) {
 }
 
 // hide typing indicator on page load? 
-document.getElementById('typing').style.display = 'none';
+//document.getElementById('typing').style.display = 'none';

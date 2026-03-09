@@ -404,7 +404,6 @@ body {
   line-height: 1.65;
   font-size: 13.5px;
   max-width: calc(100% - 44px);
-  white-space: pre-wrap;
 }
 
 .message.ai .msg-content {
