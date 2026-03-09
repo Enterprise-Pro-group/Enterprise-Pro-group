@@ -60,7 +60,6 @@ def process_receipt(image_path):
     # EXTRACT ITEMS
     
 
-    price_pattern = r'(\d+\.\d{2})'
 
     ignore_words = [
         "SUBTOTAL", "TOTAL", "TAX",
@@ -76,7 +75,7 @@ def process_receipt(image_path):
             continue
 
         # Must contain price
-        price_match = re.search(price_pattern, row)
+        price_match = re.search(r'(\d+\.\d{2})', row)
         if not price_match:
             continue
 
@@ -84,25 +83,24 @@ def process_receipt(image_path):
         if any(word in row.upper() for word in ignore_words):
             continue
 
-        price = price_match.group(1)
 
-        # Remove price from row to get name
-        name = re.sub(price_pattern, "", row).strip()
-        name = re.sub(r'\s{2,}', ' ', name)
+        product_price = price_match.group(1)
+        product_name = re.sub(r'(\d+\.\d{2})', "", row).strip()
+        product_name = re.sub(r'\s{2,}', ' ', product_name)
 
-        if len(name) < 2:
+        if len(product_name) < 2:
             continue
 
         items.append({
-            "name": name,
-            "price": price
+            "product_name": product_name,
+            "product_price": product_price
         })
 
    
     #extract the store name from the receipt , we are checking first 5 lines
     lines = [line.strip() for line in final_text.split("\n") if line.strip()]
     store_name = "Unknown Store"
-    location = "Unknown Location"
+    store_address = "Unknown address"
 
     for line in lines[:5]:
 
@@ -114,13 +112,13 @@ def process_receipt(image_path):
 
         # 2. Location: simple pattern like "123 High Street"
         if re.search(r'\d{1,3}\s\w+\s\w+', line):
-            location = line
+            store_address = line
             continue
 
     return {
         "store_name": store_name,
-        "items": items,
-        "location": location
+        "store_address": store_address,
+        "items": items
     }
 
         

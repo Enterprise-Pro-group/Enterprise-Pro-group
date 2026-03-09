@@ -11,7 +11,7 @@ from ReceiptScanner import process_receipt
 app = Flask(__name__)
 app.secret_key = "stayhere"
 
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = "uploads" #creating an uploads folder to store uploaded receipts
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
@@ -20,7 +20,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def opendb():
     db = pymysql.connect(
         host = "localhost",
-        database = "shopquick",
+        database = "shop_quick",
         user = "root",
         password = "",
         port= 3306,
@@ -221,23 +221,23 @@ def scan():
         return jsonify({"error": "Empty filename"}), 400
 
     filename = secure_filename(file.filename)
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    filepath = os.path.join(UPLOAD_FOLDER, filename) #adding  receipt to uploads folder
 
     try:
         file.save(filepath)
-        extracted_data = process_receipt(filepath)
+        extracted_data = process_receipt(filepath) #extracted data is a dictionary that stores , store name , address , and item prices and names
 
         store_name = extracted_data.get("store_name") or ""
         items = extracted_data.get("items") or []
-        location = extracted_data.get("location") or ""
+        store_address = extracted_data.get("store_address") or ""
 
         validated_items = []
         for item in items:
-            if "name" in item and "price" in item:
+            if "product_name" in item and "product_price" in item:
                 try:
                     validated_items.append({
-                        "name": item["name"].strip(),
-                        "price": float(item["price"])
+                        "product_name": item["product_name"].strip(),
+                        "product_price": float(item["product_price"])
                     })
                 except ValueError:
                     continue
@@ -253,16 +253,14 @@ def scan():
             "is_receipt": True,
             "store_name": store_name,
             "items": validated_items,
-            "location": location
+            "store_address": store_address
         })
     
-
-
-    
-
     except Exception as e:
         print("Scan error:", e)
         return jsonify({"error": "Failed to process receipt"}), 500
+    
+
 @app.route("/save-receipt", methods=["POST"])
 def save_receipt():
     data = request.get_json()
@@ -271,7 +269,7 @@ def save_receipt():
 
     store_name = data.get("store_name")
     items = data.get("items", [])
-    location = data.get("location", "")
+    store_address = data.get("store_address", "")
 
     if not store_name or not items:
         return jsonify({"error": "Invalid data"}), 400
@@ -280,30 +278,30 @@ def save_receipt():
     cursor = db.cursor()
 
     try:
-        # 'name' → 'store_name' to match your schema
+        
         cursor.execute(
-            "SELECT id FROM stores WHERE store_name = %s AND location = %s",
-            (store_name, location)
+            "SELECT store_id FROM stores WHERE store_name = %s AND store_address = %s",
+            (store_name, store_address)
         )
 
         if store := cursor.fetchone():
-            store_id = store["id"]
+            store_id = store["store_id"]
         else:
             cursor.execute(
-                "INSERT INTO stores (store_name, location) VALUES (%s, %s)",
-                (store_name, location)
+                "INSERT INTO stores (store_name, store_address) VALUES (%s, %s)",
+                (store_name, store_address)
             )
             db.commit()
             store_id = cursor.lastrowid
 
         for item in items:
-            # Removed trailing commas in column list and VALUES
+           
             cursor.execute("""
-                INSERT INTO products (product_name, price, store_id)
+                INSERT INTO products (product_name, product_price, store_id)
                 VALUES (%s, %s, %s)
             """, (
-                item["name"].strip().title(),
-                float(item["price"]),
+                item["product_name"].strip().title(),
+                float(item["product_price"]),
                 store_id
             ))
         
@@ -312,10 +310,6 @@ def save_receipt():
         return jsonify({"message": "Receipt saved successfully!"})
     
 
-    except Exception as e:
-        db.rollback()
-        print("Save error:", e)
-        return jsonify({"error": "Database error"}), 500
 
     finally:
         db.close()

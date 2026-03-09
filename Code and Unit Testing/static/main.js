@@ -92,7 +92,7 @@ async function handleFile(e) {
     displayReceiptInChat(data);
 
   } catch (err) {
-    simulateReply("receipt cannot be processed.");
+    simulateReply("Receipt cannot be processed.");
   }
 
   e.target.value = '';
@@ -103,12 +103,12 @@ function displayReceiptInChat(data) {
     <p> Receipt Scanned Successfully</p>
 
     <p><strong>Store:</strong></p>
-    <input id="storeName" value="${data.store_name || ''}">
+    <input id="StoreName" value="${data.store_name || ''}">
     
     <br><br>
   
   <p><strong>Location:</strong></p>
-    <input id="storeLocation" value="${data.location || ''}">
+    <input id="StoreAddress" value="${data.store_address || ''}">
 
 
     <p><strong>Items:</strong></p>
@@ -117,8 +117,8 @@ function displayReceiptInChat(data) {
   data.items.forEach((item) => {
     message += `
       <div style="margin-bottom:6px;">
-        <input class="itemName" value="${item.name}">
-        <input class="itemPrice" value="${item.price}" style="width:80px;">
+        <input class="ProductName" value="${item.product_name}">
+        <input class="ProductPrice" value="${item.product_price}" >
       </div>
     `;
   });
@@ -132,36 +132,64 @@ function displayReceiptInChat(data) {
 }
 
 async function saveReceipt() {
-  const storeName = document.getElementById("storeName").value.trim();
-  const location = document.getElementById("storeLocation").value.trim();
-  const itemNames = document.querySelectorAll(".itemName");
-  const itemPrices = document.querySelectorAll(".itemPrice");
+  const store_name = document.getElementById("StoreName").value.trim();
+  const store_address = document.getElementById("StoreAddress").value.trim();
+  const product_names = document.querySelectorAll(".ProductName");
+  const product_prices = document.querySelectorAll(".ProductPrice");
+
+  if (!store_name || !store_address) {
+    simulateReply("Enter store name and address.");
+    return;
+  }
 
   const items = [];
 
-  for (let i = 0; i < itemNames.length; i++) {
-    const name = itemNames[i].value.trim();
-    const price = parseFloat(itemPrices[i].value);
+  for (let i = 0; i < product_names.length; i++) {
+    const name = product_names[i].value.trim();
+    const price = parseFloat(product_prices[i].value);
 
-
-    if (!storeName || !location || !name || isNaN(price)) {
-      simulateReply(" Enter all details before saving.");
+    if (!name || isNaN(price)) {
+      simulateReply("Enter valid product name and price for all items.");
       return;
     }
 
-    items.push({ name, price });
-
+    items.push({
+      product_name: name,
+      product_price: price
+    });
   }
 
-  const response = await fetch("/save-receipt", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ store_name: storeName, items, location })
-  });
+  try {
+    const response = await fetch("/save-receipt", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        store_name,
+        store_address,
+        items
+      })
+    });
 
-  const result = await response.json();
-  simulateReply("Receipt is successfully saved to database.");
+    if (!response.ok) {
+      throw new Error("Failed to save receipt");
+    }
+
+    const result = await response.json();
+    simulateReply("Receipt is successfully saved to database.");
+
+  } catch (error) {
+    console.error(error);
+    simulateReply("Error saving receipt. Please try again.");
+  }
 }
+
+
+
+
+
+
 function appendBotMessageHTML(htmlContent) {
 
   const messages = document.getElementById('messages');
