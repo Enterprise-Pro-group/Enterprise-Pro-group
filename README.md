@@ -15,6 +15,11 @@
 - install spacy nlp
   - pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.7.0/en_core_web_lg-3.7.0-py3-none-any.whl
 
+## Set up database
+- run mysql server
+- create database named 'shopquick'
+- import shopquick.sql
+
 ## Run app 
 - cd 'code and unit testing' 
 - activate venv
@@ -25,10 +30,11 @@
   - (windows): python app.py
   - (linux/mac): python3 app.py 
 
-- follow url
+- follow link (http://127.0.0.1:5000)
 
 - stop app 
   - ctrl+c
 
 - deactivate venv 
   - deactivate
+
