@@ -4,9 +4,60 @@ import imutils
 import pytesseract #an interface to the Tesseract OCR engine
 import re #regular expressions for pattern matching
 from imutils.perspective import four_point_transform # applies a birds-eye view of an input image
+import os
+import platform
+import shutil
+
+# find the path to tesseract 
+def get_path():
+    # check if its already in system path 
+    system_path = shutil.which("tesseract")
+    if system_path:
+        return system_path
+
+    # check common locations for each operating system 
+    osystem = platform.system()
+    # windows 
+    if osystem == "Windows":
+        windows_paths = [
+            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+            os.path.join(os.environ.get('LOCALAPPDATA', ''), r'Programs\Tesseract-OCR\tesseract.exe')
+        ]
+        for path in windows_paths:
+            if os.path.exists(path):
+                return path
+    
+    # mac 
+    elif osystem == "Darwin":
+        mac_paths = [
+            '/opt/homebrew/bin/tesseract',  # Apple Silicon (M1/M2/M3) Homebrew
+            '/usr/local/bin/tesseract',     # Intel Mac Homebrew
+            '/opt/local/bin/tesseract'      # MacPorts
+        ]
+        for path in mac_paths:
+            if os.path.exists(path):
+                return path
+    
+    # linux 
+    elif osystem == "Linux":
+        linux_paths = ['/usr/bin/tesseract', '/usr/local/bin/tesseract']
+        for path in linux_paths:
+            if os.path.exists(path):
+                return path
+
+    return None
+
+# Apply the detected path
+tesseract_exe = get_path()
+
+if tesseract_exe:
+    pytesseract.pytesseract.tesseract_cmd = tesseract_exe
+else:
+    print("WARNING: Tesseract OCR engine not found!")
+
 
 #pytesseract.pytesseract.tesseract_cmd = r"C:\Users\MH103\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
-
 
 def process_receipt(image_path):
 
@@ -60,7 +111,6 @@ def process_receipt(image_path):
     # EXTRACT ITEMS
     
 
-    price_pattern = r'(\d+\.\d{2})'
 
     ignore_words = [
         "SUBTOTAL", "TOTAL", "TAX",
@@ -76,7 +126,7 @@ def process_receipt(image_path):
             continue
 
         # Must contain price
-        price_match = re.search(price_pattern, row)
+        price_match = re.search(r'(\d+\.\d{2})', row)
         if not price_match:
             continue
 
@@ -84,25 +134,24 @@ def process_receipt(image_path):
         if any(word in row.upper() for word in ignore_words):
             continue
 
-        price = price_match.group(1)
 
-        # Remove price from row to get name
-        name = re.sub(price_pattern, "", row).strip()
-        name = re.sub(r'\s{2,}', ' ', name)
+        product_price = price_match.group(1)
+        product_name = re.sub(r'(\d+\.\d{2})', "", row).strip()
+        product_name = re.sub(r'\s{2,}', ' ', product_name)
 
-        if len(name) < 2:
+        if len(product_name) < 2:
             continue
 
         items.append({
-            "name": name,
-            "price": price
+            "product_name": product_name,
+            "product_price": product_price
         })
 
    
     #extract the store name from the receipt , we are checking first 5 lines
     lines = [line.strip() for line in final_text.split("\n") if line.strip()]
     store_name = "Unknown Store"
-    location = "Unknown Location"
+    store_address = "Unknown address"
 
     for line in lines[:5]:
 
@@ -114,13 +163,13 @@ def process_receipt(image_path):
 
         # 2. Location: simple pattern like "123 High Street"
         if re.search(r'\d{1,3}\s\w+\s\w+', line):
-            location = line
+            store_address = line
             continue
 
     return {
         "store_name": store_name,
-        "items": items,
-        "location": location
+        "store_address": store_address,
+        "items": items
     }
 
         

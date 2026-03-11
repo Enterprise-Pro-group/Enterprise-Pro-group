@@ -126,6 +126,7 @@ def logout():
     session.pop('loggedin', None)
     session.pop('user_id', None)
     session.pop('username', None)
+    session.clear()
     return redirect(url_for('login'))
 
 
@@ -251,22 +252,25 @@ def process():
 
                 # loop through items in result and add to the reply
                 for item_name, info in result["items"].items():
-                    if info:
-                        # Format: - Bread: £1.20 at Tesco (123 High St)
-                        reply += f"• **{item_name.capitalize()}**: £{info['price']:.2f} at {info['store_name']} ({info['address']})\n"
+                    # check if info is a dictionary (meaning a product was found)
+                    if isinstance(info, dict) and info.get('product_price', 0) > 0:
+                        price = info.get('product_price', 0)
+                        store = info.get('store_name', 'Unknown Store')
+                        address = info.get('store_address', 'No Address Provided') 
+        
+                        reply += f"• **{item_name.capitalize()}**: £{price:.2f} at {store} ({address})\n"
                     else:
-                        reply += f"• **{item_name.capitalize()}**: Sorry, I couldn't find this nearby.\n"
-                
-                # add total cost summary
-                reply += f"\n**Total Cost**: £{result['total_cost']:.2s}"
+                        reply += f"• **{item_name.capitalize()}**: ❌ Not available in your current search area.\n"
 
-                # note about budget
+                # add total cost summary
+                reply += f"\n**Total Estimated Cost**: £{result['total_cost']:.2f}"
+
                 if result["within_budget"]:
                     reply += "\n✅ This is within your budget!"
                 else:
                     reply += "\n⚠️ This is slightly over your budget."
 
-                # reset the session data and set stage back to extract ready for the next message 
+                # reset the session data and set stage back to extract for the next conversation 
                 session.pop("data", None)
                 session["stage"] = "extract"
                 return jsonify({"reply": reply})
@@ -281,7 +285,7 @@ def process():
                 diet = f" (Diet: {session['data']['dietary_requirement']})" if session['data']['dietary_requirement'] else ""
 
                 # make summary message
-                summary = f"I've updated that for you. To confirm, you are in {session['data']['city'].title()} ({session['data']['postcode']}) with a budget of £{session['data']['budget']} for: {items}. {diet} Is this correct now?"
+                summary = f"Thanks! To confirm, you are in {session['data']['city'].title()} ({session['data']['postcode']}) with a budget of £{session['data']['budget']} for: {items}. {diet} Is this correct now?"
                 return jsonify({"reply": summary})  
 
         return jsonify({"reply": "I'm listening! Please tell me your budget, city, postcode, and items."})      
@@ -316,7 +320,7 @@ def extract(doc, message):
 
         elif ent.label_ == "DIET":
             data["dietary_requirement"] = ent.text.lower()
-                #data["dietary_requirements"].append(ent.text.lower())
+            #data["dietary_requirements"].append(ent.text.lower())
 
     # extract all numbers
     for token in doc:
@@ -402,12 +406,12 @@ def calculate(user_request): # takes a dictionary
 
     clean_postcode = "".join(user_request["postcode"].split()).upper()
     prefix = clean_postcode
-    print(prefix)
+    #print(prefix)
     while len(prefix) > 2:
         test_query = f"""
             SELECT COUNT(*) AS store_count
             FROM stores
-            WHERE UPPER(REPLACE(postcode, ' ', '')) LIKE '{prefix}%'
+            WHERE UPPER(REPLACE(store_postcode, ' ', '')) LIKE '{prefix}%'
         """
         cursor.execute(test_query)
         query_res = cursor.fetchone()
@@ -423,21 +427,25 @@ def calculate(user_request): # takes a dictionary
 
     for product in user_request["shopping_list"]:
         query = f"""
-                    SELECT p.product_id, p.product_name, p.product_price, s.store_id, s.store_name, s.store_address, s.store_postcode, s.store_city
-                    FROM products p
-                    JOIN stores s on p.store_id = s.store_id
-                    WHERE s.store_city LIKE '%{user_request["city"]}%'
-                    AND REPLACE(s.store_postcode, ' ', '') LIKE '%{prefix}%'
-                    AND p.product_name LIKE '%{product}%'
-                    ORDER BY p.price ASC
-                    LIMIT 1
-                """
+            SELECT p.product_id, p.product_name, p.product_price, 
+                s.store_id, s.store_name, s.store_address, 
+                s.store_postcode, s.store_city
+            FROM products p
+            JOIN stores s ON p.store_id = s.store_id
+            WHERE s.store_city LIKE %s 
+            AND UPPER(REPLACE(s.store_postcode, ' ', '')) LIKE %s
+            AND p.product_name LIKE %s
+            ORDER BY p.product_price ASC
+            LIMIT 1
+        """
+        cursor.execute(query, (f"%{user_request['city']}%", f"{prefix}%", f"%{product}%")) # Execute query
+        cheapest_product = cursor.fetchone() # Get the first row of query
 
-        cursor.execute(query)  # Execute query
-        cheapest_product = cursor.fetchone()  # Get the first row of query
-
-        final_products[product] = cheapest_product
-        total_cost += cheapest_product["price"]
+        if cheapest_product:
+            final_products[product] = cheapest_product
+            total_cost += cheapest_product["product_price"]
+        else:
+            final_products[product] = {"product_name": product, "product_price": 0, "store_name": "Not Found", "store_address": "N/A"}
 
     conn.close()
 
@@ -487,23 +495,23 @@ def scan():
         return jsonify({"error": "Empty filename"}), 400
 
     filename = secure_filename(file.filename)
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    filepath = os.path.join(UPLOAD_FOLDER, filename) #adding  receipt to uploads folder
 
     try:
         file.save(filepath)
-        extracted_data = process_receipt(filepath)
+        extracted_data = process_receipt(filepath) #extracted data is a dictionary that stores , store name , address , and item prices and names
 
         store_name = extracted_data.get("store_name") or ""
         items = extracted_data.get("items") or []
-        location = extracted_data.get("location") or ""
+        store_address = extracted_data.get("store_address") or ""
 
         validated_items = []
         for item in items:
-            if "name" in item and "price" in item:
+            if "product_name" in item and "product_price" in item:
                 try:
                     validated_items.append({
-                        "name": item["name"].strip(),
-                        "price": float(item["price"])
+                        "product_name": item["product_name"].strip(),
+                        "product_price": float(item["product_price"])
                     })
                 except ValueError:
                     continue
@@ -519,14 +527,13 @@ def scan():
             "is_receipt": True,
             "store_name": store_name,
             "items": validated_items,
-            "location": location
+            "store_address": store_address
         })
     
     except Exception as e:
         print("Scan error:", e)
         return jsonify({"error": "Failed to process receipt"}), 500
-
-
+    
 # save receipt data
 @app.route("/save-receipt", methods=["POST"])
 def save_receipt():
@@ -536,7 +543,9 @@ def save_receipt():
 
     store_name = data.get("store_name")
     items = data.get("items", [])
-    location = data.get("location", "")
+    store_address = data.get("store_address", "")
+    store_postcode = data.get("store_postcode", "")
+    store_city = data.get("store_city", "")
 
     if not store_name or not items:
         return jsonify({"error": "Invalid data"}), 400
@@ -545,30 +554,30 @@ def save_receipt():
     cursor = db.cursor()
 
     try:
-        # 'name' → 'store_name' to match your schema
+        
         cursor.execute(
-            "SELECT id FROM stores WHERE store_name = %s AND location = %s",
-            (store_name, location)
+            "SELECT store_id FROM stores WHERE store_name = %s AND store_address = %s",
+            (store_name, store_address)
         )
 
         if store := cursor.fetchone():
-            store_id = store["id"]
+            store_id = store["store_id"]
         else:
             cursor.execute(
-                "INSERT INTO stores (store_name, location) VALUES (%s, %s)",
-                (store_name, location)
+                "INSERT INTO stores (store_name, store_address ,store_postcode, store_city) VALUES (%s, %s, %s, %s)",
+                (store_name, store_address, store_postcode ,store_city )
             )
             db.commit()
             store_id = cursor.lastrowid
 
         for item in items:
-            # Removed trailing commas in column list and VALUES
+           
             cursor.execute("""
-                INSERT INTO products (product_name, price, store_id)
+                INSERT INTO products (product_name, product_price, store_id)
                 VALUES (%s, %s, %s)
             """, (
-                item["name"].strip().title(),
-                float(item["price"]),
+                item["product_name"].strip().title(),
+                float(item["product_price"]),
                 store_id
             ))
         
@@ -577,10 +586,6 @@ def save_receipt():
         return jsonify({"message": "Receipt saved successfully!"})
     
 
-    except Exception as e:
-        db.rollback()
-        print("Save error:", e)
-        return jsonify({"error": "Database error"}), 500
 
     finally:
         db.close()
