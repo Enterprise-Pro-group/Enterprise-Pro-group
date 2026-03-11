@@ -198,6 +198,13 @@ async function saveReceipt() {
   }
 }
 
+
+function getCurrentTime() {
+  const now = new Date();
+  return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+
 function appendBotMessageHTML(htmlContent) {
 
   const messages = document.getElementById('messages');
@@ -213,7 +220,7 @@ function appendBotMessageHTML(htmlContent) {
       <div class="msg-content">
         ${htmlContent}
       </div>
-      <div class="msg-meta">ShopQuick AI · Just now</div>
+      <div class="msg-meta">ShopQuick AI · ${getCurrentTime()}</div>
     </div>
   `;
 
@@ -247,18 +254,18 @@ async function sendMessage() {
     const data = await response.json();
 
     // pass to reply 
-    reply(data.reply);
+    reply(data.reply);  
+    
+    if (data.popup) {
+      // will show the real popup instead 
+      alert(`🎉 You saved $${data.savings.toFixed(2)}!`);
+  }
 
   } catch (error) {
     console.error("Error calling Flask:", error);
     reply("Sorry, I'm having trouble connecting to the server.");
   } finally {
     if (typing) typing.style.display = 'none';
-  }
-
-  if (data.popup) {
-    // will show the real popup instead 
-    alert(`🎉 You saved $${data.savings}!`);
   }
 
 }
@@ -286,7 +293,7 @@ function appendUserMessage(text) {
         <div class="msg-avatar user">U</div>
         <div>
           <div class="msg-content">${escapeHtml(text)}</div>
-          <div class="msg-meta">Just now</div>
+          <div class="msg-meta">ShopQuick AI · ${getCurrentTime()}</div>
         </div>`;
   messages.appendChild(msg);
   messages.appendChild(typing);
@@ -324,7 +331,7 @@ function reply(text) {
     <div class="msg-avatar ai">🛒</div>
     <div>
       <div class="msg-content">${(text)}</div>
-      <div class="msg-meta">ShopQuick AI · Just now</div>
+      <div class="msg-meta">ShopQuick AI · ${getCurrentTime()}</div>
     </div>`;
 
   messages.appendChild(msg);
