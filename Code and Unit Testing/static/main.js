@@ -256,6 +256,11 @@ async function sendMessage() {
     if (typing) typing.style.display = 'none';
   }
 
+  if (data.popup) {
+    // will show the real popup instead 
+    alert(`🎉 You saved $${data.savings}!`);
+  }
+
 }
 
 // when u choose a chat on newchat

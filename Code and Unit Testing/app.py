@@ -9,6 +9,7 @@ from word2number import w2n
 import os
 from werkzeug.utils import secure_filename
 from ReceiptScanner import process_receipt
+from datetime import datetime
 
 # configure app 
 app = Flask(__name__)
@@ -175,6 +176,30 @@ def delete_history():
     return render_template("settings.html")
 
 
+# save message to db 
+def save_msg(role, content):
+    try:
+        user_id = session.get("user_id")
+        created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        db = opendb()
+
+        try:
+            with db.cursor() as cursor:
+                query = """
+                INSERT INTO messages (user_id, role, content, created_at) 
+                VALUES (%s, %s, %s, %s)
+                """
+                values = (user_id, role, content, created_at)
+                cursor.execute(query, values)
+            db.commit()
+        finally:
+            db.close()
+            
+    except Exception as e:
+        # catch error
+        print(f"DATABASE ERROR: {e}") 
+
+
 # main chatbot page 
 @app.route("/", methods=["GET", "POST"])
 @app.route("/chat", methods=["GET", "POST"])
@@ -183,9 +208,7 @@ def process():
     if request.method == "POST":
         # get the user's message 
         message = request.json["message"] 
-
-        # add that message to the db with the time stamp and the role of user 
-        # every time it sends a message it needs to add that to the db 
+        save_msg("user", message)
 
         # session variables 
         if "stage" not in session:
@@ -221,7 +244,8 @@ def process():
         
                 # make summary message 
                 summary = f"Okay! To confirm, you are in {session['data']['city'].title()} ({session['data']['postcode']}) with a budget of £{session['data']['budget']} for: {items}. {diet} Is this correct?"
-        
+                
+                save_msg("quick", summary) # add message to db 
                 session["stage"] = "confirm"   
                 return jsonify({"reply": summary})
             
@@ -230,9 +254,13 @@ def process():
                 missing = [k for k in mandatory if not session["data"].get(k)]
                 if missing:
                     missing_reply = ", ".join(missing).replace('_', ' ')
-                    return jsonify({"reply": f"I still need to know your: {missing_reply}."}) 
+                    reply = f"I still need to know your: {missing_reply}."
+                    save_msg("quick", reply)
+                    return jsonify({"reply": reply}) 
                 
-                return jsonify({"reply": "I've got that. What else can you tell me?"})
+                reply = "I've got that. What else can you tell me?"
+                save_msg("quick", summary)
+                return jsonify({"reply": reply})
 
         # STAGE 2 - CONFIRM  
         elif session["stage"] == "confirm":           
@@ -273,7 +301,8 @@ def process():
                 # reset the session data and set stage back to extract for the next conversation 
                 session.pop("data", None)
                 session["stage"] = "extract"
-                return jsonify({"reply": reply})
+                save_msg("quick", reply)
+                return jsonify({"reply": reply, "popup": True, "savings": 2})
 
             # else if answer is a negation  
             else:
@@ -286,11 +315,12 @@ def process():
 
                 # make summary message
                 summary = f"Thanks! To confirm, you are in {session['data']['city'].title()} ({session['data']['postcode']}) with a budget of £{session['data']['budget']} for: {items}. {diet} Is this correct now?"
+                save_msg("quick", summary)
                 return jsonify({"reply": summary})  
 
-        return jsonify({"reply": "I'm listening! Please tell me your budget, city, postcode, and items."})      
-        #return jsonify({"reply": message})
-        #return render_template("chat.html", reply=message)
+        reply = "I'm listening! Please tell me your budget, city, postcode, and items."
+        save_msg("quick", reply)
+        return jsonify({"reply": reply})      
     
     return render_template("main.html")
 
